@@ -1,0 +1,2 @@
+# EzThermometer.Device
+Connected Thermometer
