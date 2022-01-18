@@ -3,9 +3,9 @@
 #include <PubSubClient.h>
 #include "DHT.h"
 #include <PeriodicTask.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include <MHZ19.h>
+#include <TFT_eSPI.h>
+#include "xbm.h"
 
 #define MQTT_VERSION MQTT_VERSION_3_1_1
 
@@ -14,12 +14,7 @@
 #define MHZ19_BAUDRATE 9600
 #define MHZ19_PROTOCOL SERIAL_8N1
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+TFT_eSPI dsply = TFT_eSPI(); // TFT LCD screen object
 
 MHZ19 mhz19;
 
@@ -132,35 +127,31 @@ void setupMqtt(){
 }
 
 void setupDisplay() {
-    // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
+  // turn ON the dispaly
+  pinMode(15, OUTPUT);    // Backlight pin of the display is connecte to this pin of ESP32
+  digitalWrite(15, LOW);  // we have to drive this pin LOW in order to turn ON the display
+  delay(1);               // delay for 1ms
 
-  // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
-  display.display();
-  delay(2000); // Pause for 2 seconds
+  dsply.init();
+  dsply.fillScreen(TFT_BLACK);    //  fill the screen with black color
+  dsply.setTextColor(TFT_WHITE);  //  set the text color
+  dsply.setRotation(1);
 }
 
 String getHumidityString() {
-    String str = "H: ";
-    str.concat(String(humidity, 1));
+    String str = String(humidity, 1);
     str.concat(" %");
     return str;
 }
 
 String getTemperatureString() {
-    String str = "T: ";
-    str.concat(String(temperature, 1));
+    String str = String(temperature, 1);
     str.concat(" *C");
     return str;
 }
 
 String getCO2String() {
-    String str = "CO2: ";
-    str.concat(co2);
+    String str = String(co2);
     str.concat(" ppm");
     return str;
 }
@@ -186,10 +177,46 @@ void readDHT22() {
   }
 }
 
+uint32_t getCo2Color(){
+  if (co2 < 800) {
+    return TFT_GREEN;
+  }
+  
+  if (co2 < 1500) {
+    return TFT_ORANGE;
+  }
+  return TFT_RED;
+}
+
 void readMHZ19() {
   co2 = mhz19.getCO2();
   co2Str = getCO2String();
   Serial.println(co2Str);
+}
+
+void refreshDisplay() {
+  dsply.setTextSize(3);
+
+  dsply.fillRect(100, 10, 340, 64, TFT_BLACK);
+  dsply.setCursor(100, 30);
+  dsply.println(temperatureStr);
+
+  dsply.fillRect(100, 90, 340, 64, TFT_BLACK);
+  dsply.setCursor(100, 110);
+  dsply.println(humidityStr);
+
+  dsply.fillRect(100, 170, 340, 64, TFT_BLACK);
+  dsply.setCursor(100, 190);
+  dsply.println(co2Str);
+
+  uint32_t color = getCo2Color();
+  dsply.fillRect(260, 170, 64, 64, color);
+}
+
+void showLayout() {
+  dsply.pushImage(20, 10, image_width, image_width, thermometerIcon);
+  dsply.pushImage(20, 90, image_width, image_width, humidityIcon);
+  dsply.pushImage(20, 170, image_width, image_width, co2Icon);
 }
 
 PeriodicTask readDHT22PeriodicTask(2000UL, readDHT22);
@@ -197,6 +224,8 @@ PeriodicTask readDHT22PeriodicTask(2000UL, readDHT22);
 PeriodicTask readMHZ19PeriodicTask(1000UL, readMHZ19);
 
 PeriodicTask mqttPublishPeriodicTask(mqttPublishPeriodInSeconds * 1000UL, mqttPublish);
+
+PeriodicTask refreshDisplayPeriodicTask(1000UL, refreshDisplay);
 
 void setup() {
   // init the serial
@@ -207,7 +236,8 @@ void setup() {
   setupWiFi();
   setupMqtt();
   setupDisplay();
-  
+  showLayout();
+
   Serial2.begin(MHZ19_BAUDRATE, MHZ19_PROTOCOL, RXD2, TXD2);
 
   mhz19.begin(Serial2);
@@ -218,17 +248,7 @@ void loop() {
   readDHT22PeriodicTask.loop();
   readMHZ19PeriodicTask.loop();
 
-  display.clearDisplay();
+  refreshDisplayPeriodicTask.loop();
 
-  display.setTextSize(2);
-  display.setTextColor(WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-
-  display.println(temperatureStr);
-  display.println(humidityStr);
-  display.println(co2Str);
-
-  display.display();
-  
   mqttPublishPeriodicTask.loop();
 }
