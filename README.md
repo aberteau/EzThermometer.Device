@@ -16,22 +16,19 @@ I am not an expert in embedded system programming and C ++. This project was cre
 - ESP32 NodeMCU Module WLAN WiFi Dev Kit C Development Board
 - DHT22 / AM2302 Temperature and humidity sensor
 - MH-Z19C NDIR CO2 Sensor
-- OLED 128 x 64 Pixel 0.96 Pouce, SSD1306
+- AZDelivery AZ-Touch Smart Home Kit de Montage Mural avec Écran Tactile TFT LCD de 2,4 Pouces, contrôleur Tactile SPI XPT2046
 
+### Assembly
 ![Assembly](/assembly.png)
+
+### ArduiTouch Connection Diagram
+![ArduiTouch Connection Diagram](/arduitouch-connection-diagram.png)
 
 |DHT22|ESP32|
 |------|---|
 |+|3.3V|
 |Out|IO32|
 |-|GND|
-
-|OLED I2C|ESP32|
-|------|---|
-|VCC|3.3V|
-|GND|GND|
-|SCL| SCL (IO22)|
-|SDA| SDA (IO21)|
 
 |MH-Z19C|ESP32|
 |------|---|
