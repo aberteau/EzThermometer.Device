@@ -7,6 +7,8 @@ This sensor displays on its OLED screen and publishes on MQTT the following info
 - humidity
 - CO2 concentration
 
+![Device](/device.jpg)
+
 ## Disclaimer
 I am not an expert in embedded system programming and C ++. This project was created for personal use and shared for educational purposes.
 
